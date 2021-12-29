@@ -98,7 +98,9 @@ def get_gender_demographics(csv_data):
     print(f"Female: {female_count} ({female_percentage}%)")
     print(f"Other / Non-Disclosed: {other_count} ({other_percentage}%)")
 
-def get_purchasing_analysis_gender(csv_data):
+    return male_count, female_count, other_count
+
+def get_purchasing_analysis_gender(csv_data, male_count, female_count, other_count):
     """
     Return the following data by gender (male/female/other):
         Purchase Count
@@ -109,32 +111,71 @@ def get_purchasing_analysis_gender(csv_data):
     :return:
     """
     # Purchase count by gender
-    male_purchase_count = None
-    female_purchase_count = None
-    other_purchase_count = None
-
-    # Average purchase price by gender
-    male_average_price = None
-    female_average_price = None
-    other_average_price = None
+    male_purchase_count = 0
+    female_purchase_count = 0
+    other_purchase_count = 0
 
     # Total purchase value by gender
-    male_total_purchase = None
-    female_total_purchase = None
-    other_total_purchase = None
+    male_total_purchase = 0
+    female_total_purchase = 0
+    other_total_purchase = 0
+
+    for index, row in csv_data.iterrows():
+        gender = row["Gender"]
+        price = row["Price"]
+
+        if gender == "Male":
+            male_purchase_count += 1
+            male_total_purchase += price
+        elif gender == "Female":
+            female_purchase_count += 1
+            female_total_purchase += price
+        elif gender == "Other / Non-Disclosed":
+            other_purchase_count += 1
+            other_total_purchase += price
+
+    # Average purchase price by gender
+    total_purchase_all = male_total_purchase + female_total_purchase + other_total_purchase
+    male_average_price = round(male_total_purchase / male_purchase_count, 2)
+    female_average_price = round(female_total_purchase / female_purchase_count, 2)
+    other_average_price = round(other_total_purchase / other_purchase_count, 2)
 
     # Average total purchase per person, by gender
-    male_average_person = None
-    female_average_person = None
-    other_average_person = None
+    male_average_person = round(male_total_purchase / male_count, 2)
+    female_average_person = round(female_total_purchase / female_count, 2)
+    other_average_person = round(other_total_purchase / other_count, 2)
 
+    # Formatting
+    male_total_purchase = round(male_total_purchase, 2)
+    female_total_purchase = round(female_total_purchase, 2)
+    other_total_purchase = round(other_total_purchase, 2)
+
+    print("--------------------------")
+    print("Purchase Analysis")
+    print("--------------------------")
+    print("Female")
+    print(f"\tPurchase Count: {female_purchase_count}")
+    print(f"\tAverage Purchase Price: ${female_average_price}")
+    print(f"\tTotal Purchase Value: ${female_total_purchase}")
+    print(f"\tAvg Total Purchase per Person: ${female_average_person}")
+    print("Male")
+    print(f"\tPurchase Count: {male_purchase_count}")
+    print(f"\tAverage Purchase Price: ${male_average_price}")
+    print(f"\tTotal Purchase Value: ${male_total_purchase}")
+    print(f"\tAvg Total Purchase per Person: ${male_average_person}")
+    print("Other / Non-Disclosed")
+    print(f"\tPurchase Count: {other_purchase_count}")
+    print(f"\tAverage Purchase Price: ${other_average_price}")
+    print(f"\tTotal Purchase Value: ${other_total_purchase}")
+    print(f"\tAvg Total Purchase per Person: ${other_average_person}")
 
 def print_final_report():
     csv_data = read_csv_file()
     get_player_count(csv_data)
     get_purchasing_analysis(csv_data)
-    get_gender_demographics(csv_data)
-    get_purchasing_analysis_gender(csv_data)
+    male_count, female_count, other_count = get_gender_demographics(csv_data)
+    get_purchasing_analysis_gender(csv_data, male_count, female_count, other_count)
+
 
 # Entry point where the script will execute
 if __name__ == "__main__":
