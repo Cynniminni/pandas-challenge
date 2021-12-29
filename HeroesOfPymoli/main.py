@@ -1,5 +1,11 @@
+import pandas
 import pandas as pd
 import os
+
+# Globally set options to display all columns and rows
+pandas.options.display.max_columns = None
+pandas.options.display.max_rows = None
+pandas.options.display.width = 0
 
 def read_csv_file():
     """
@@ -24,7 +30,12 @@ def get_player_count(csv_data):
     print("--------------------------")
     print("Player Count")
     print("--------------------------")
-    print(f"Total Players: {col_player.nunique()}")
+    # Convert into DataFrame table for display
+    data = [col_player.nunique()]
+    table = pandas.DataFrame(index=[0],
+                             columns=['Total Players'],
+                             data=[col_player.nunique()])
+    print(table)
 
 def get_purchasing_analysis(csv_data):
     """
@@ -44,12 +55,17 @@ def get_purchasing_analysis(csv_data):
     total_revenue = col_price.sum()
 
     print("--------------------------")
-    print("Purchasing Analysis:")
+    print("Purchasing Analysis")
     print("--------------------------")
-    print(f"Number of Unique Items: {num_unique_items}")
-    print(f"Average Purchase Price: ${average_purchase_price}")
-    print(f"Number of Purchases: {total_num_purchases}")
-    print(f"Total Revenue: ${total_revenue}")
+    row_labels = [0]
+    data = {
+        "Number of Unique Items": num_unique_items,
+        "Average Purchase Price": f"${average_purchase_price}",
+        "Number of Purchases": total_num_purchases,
+        "Total Revenue": f"${total_revenue}"
+    }
+    data_frame = pandas.DataFrame(data=data, index=row_labels)
+    print(data_frame)
 
 def get_gender_demographics(csv_data):
     """
@@ -87,17 +103,25 @@ def get_gender_demographics(csv_data):
             raise ValueError(f"Invalid gender value: {gender}")
 
     # Get percentages of male / female / other players
-    male_percentage = round((male_count / total_players) * 100, 2)
-    female_percentage = round((female_count / total_players) * 100, 2)
-    other_percentage = round((other_count / total_players) * 100, 2)
+    male_percentage = f"{round((male_count / total_players) * 100, 2)}%"
+    female_percentage = f"{round((female_count / total_players) * 100, 2)}%"
+    other_percentage = f"{round((other_count / total_players) * 100, 2)}%"
 
     print("--------------------------")
     print("Gender Demographics")
     print("--------------------------")
-    print(f"Male: {male_count} ({male_percentage}%)")
-    print(f"Female: {female_count} ({female_percentage}%)")
-    print(f"Other / Non-Disclosed: {other_count} ({other_percentage}%)")
-
+    row_labels = [
+        "Male",
+        "Female",
+        "Other / Non-Disclosed"
+    ]
+    data = {
+        "Total Count": [male_count, female_count, other_count],
+        "Percentage of Players": [male_percentage, female_percentage, other_percentage]
+    }
+    data_frame = pandas.DataFrame(data=data,
+                                  index=row_labels)
+    print(data_frame)
     return male_count, female_count, other_count
 
 def get_purchasing_analysis_gender(csv_data, male_count, female_count, other_count):
@@ -136,38 +160,49 @@ def get_purchasing_analysis_gender(csv_data, male_count, female_count, other_cou
 
     # Average purchase price by gender
     total_purchase_all = male_total_purchase + female_total_purchase + other_total_purchase
-    male_average_price = round(male_total_purchase / male_purchase_count, 2)
-    female_average_price = round(female_total_purchase / female_purchase_count, 2)
-    other_average_price = round(other_total_purchase / other_purchase_count, 2)
+    male_average_price = f"${round(male_total_purchase / male_purchase_count, 2)}"
+    female_average_price = f"${round(female_total_purchase / female_purchase_count, 2)}"
+    other_average_price = f"${round(other_total_purchase / other_purchase_count, 2)}"
 
     # Average total purchase per person, by gender
-    male_average_person = round(male_total_purchase / male_count, 2)
-    female_average_person = round(female_total_purchase / female_count, 2)
-    other_average_person = round(other_total_purchase / other_count, 2)
+    male_average_person = f"${round(male_total_purchase / male_count, 2)}"
+    female_average_person = f"${round(female_total_purchase / female_count, 2)}"
+    other_average_person = f"${round(other_total_purchase / other_count, 2)}"
 
     # Formatting
-    male_total_purchase = round(male_total_purchase, 2)
-    female_total_purchase = round(female_total_purchase, 2)
-    other_total_purchase = round(other_total_purchase, 2)
+    male_total_purchase = f"${round(male_total_purchase, 2)}"
+    female_total_purchase = f"${round(female_total_purchase, 2)}"
+    other_total_purchase = f"${round(other_total_purchase, 2)}"
 
     print("--------------------------")
     print("Purchase Analysis")
     print("--------------------------")
-    print("Female")
-    print(f"\tPurchase Count: {female_purchase_count}")
-    print(f"\tAverage Purchase Price: ${female_average_price}")
-    print(f"\tTotal Purchase Value: ${female_total_purchase}")
-    print(f"\tAvg Total Purchase per Person: ${female_average_person}")
-    print("Male")
-    print(f"\tPurchase Count: {male_purchase_count}")
-    print(f"\tAverage Purchase Price: ${male_average_price}")
-    print(f"\tTotal Purchase Value: ${male_total_purchase}")
-    print(f"\tAvg Total Purchase per Person: ${male_average_person}")
-    print("Other / Non-Disclosed")
-    print(f"\tPurchase Count: {other_purchase_count}")
-    print(f"\tAverage Purchase Price: ${other_average_price}")
-    print(f"\tTotal Purchase Value: ${other_total_purchase}")
-    print(f"\tAvg Total Purchase per Person: ${other_average_person}")
+    row_labels = [
+        "Female",
+        "Male",
+        "Other / Non-Disclosed"
+    ]
+    data = {
+        "Purchase Count": [female_purchase_count, male_purchase_count, other_purchase_count],
+        "Average Purchase Price": [female_average_price, male_average_price, other_average_price],
+        "Total Purchase Value": [female_total_purchase, male_total_purchase, other_total_purchase],
+        "Avg Total Purchase per Person": [female_average_person, male_average_person, other_average_person]
+    }
+    data_frame = pandas.DataFrame(data=data,
+                                  index=row_labels)
+    print(data_frame)
+
+def get_age_demographics():
+    """
+    Returns the following data:
+        Bins for ages
+        Categories of existing players using age bins
+        Numbers and percentages by age group
+        Summary data frame to hold results
+        Display Age Demographics Table
+    :return:
+    """
+    pass
 
 def print_final_report():
     csv_data = read_csv_file()
@@ -175,6 +210,7 @@ def print_final_report():
     get_purchasing_analysis(csv_data)
     male_count, female_count, other_count = get_gender_demographics(csv_data)
     get_purchasing_analysis_gender(csv_data, male_count, female_count, other_count)
+    get_age_demographics()
 
 
 # Entry point where the script will execute
