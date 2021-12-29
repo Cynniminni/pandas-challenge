@@ -1,11 +1,11 @@
-import pandas
+import numpy as np
 import pandas as pd
 import os
 
 # Globally set options to display all columns and rows
-pandas.options.display.max_columns = None
-pandas.options.display.max_rows = None
-pandas.options.display.width = 0
+pd.options.display.max_columns = None
+pd.options.display.max_rows = None
+pd.options.display.width = 0
 
 def read_csv_file():
     """
@@ -32,9 +32,9 @@ def get_player_count(csv_data):
     print("--------------------------")
     # Convert into DataFrame table for display
     data = [col_player.nunique()]
-    table = pandas.DataFrame(index=[0],
-                             columns=['Total Players'],
-                             data=[col_player.nunique()])
+    table = pd.DataFrame(index=[0],
+                         columns=['Total Players'],
+                         data=[col_player.nunique()])
     print(table)
 
 def get_purchasing_analysis(csv_data):
@@ -64,7 +64,7 @@ def get_purchasing_analysis(csv_data):
         "Number of Purchases": total_num_purchases,
         "Total Revenue": f"${total_revenue}"
     }
-    data_frame = pandas.DataFrame(data=data, index=row_labels)
+    data_frame = pd.DataFrame(data=data, index=row_labels)
     print(data_frame)
 
 def get_gender_demographics(csv_data):
@@ -119,8 +119,8 @@ def get_gender_demographics(csv_data):
         "Total Count": [male_count, female_count, other_count],
         "Percentage of Players": [male_percentage, female_percentage, other_percentage]
     }
-    data_frame = pandas.DataFrame(data=data,
-                                  index=row_labels)
+    data_frame = pd.DataFrame(data=data,
+                              index=row_labels)
     print(data_frame)
     return male_count, female_count, other_count
 
@@ -131,6 +131,9 @@ def get_purchasing_analysis_gender(csv_data, male_count, female_count, other_cou
         Average Purchase Price
         Total Purchase Value
         Average Purchase Total per Person by Gender
+    :param other_count:
+    :param female_count:
+    :param male_count:
     :param csv_data:
     :return:
     """
@@ -188,11 +191,11 @@ def get_purchasing_analysis_gender(csv_data, male_count, female_count, other_cou
         "Total Purchase Value": [female_total_purchase, male_total_purchase, other_total_purchase],
         "Avg Total Purchase per Person": [female_average_person, male_average_person, other_average_person]
     }
-    data_frame = pandas.DataFrame(data=data,
-                                  index=row_labels)
+    data_frame = pd.DataFrame(data=data,
+                              index=row_labels)
     print(data_frame)
 
-def get_age_demographics():
+def get_age_demographics(csv_data):
     """
     Returns the following data:
         Bins for ages
@@ -202,7 +205,36 @@ def get_age_demographics():
         Display Age Demographics Table
     :return:
     """
-    pass
+    print("--------------------------")
+    print("Age Demographics")
+    print("--------------------------")
+    # Initialize the data frame with the csv data
+    data_frame = pd.DataFrame(data=csv_data)
+
+    # Define bins for ages and add a new column for the Bins
+    bins = [-np.inf, 10, 14, 19, 24, 29, 34, 39, np.inf]
+    data_frame["Bins"] = pd.cut(data_frame["Age"], bins=bins)
+
+    # Drop duplicates based on SN
+    data_frame = data_frame.drop_duplicates(subset="SN", keep="first")
+    total_players = len(data_frame.index)
+
+    # Sort data by Bins column and get the counts of each bin
+    bin_data = data_frame["Bins"].value_counts().sort_index().to_frame()
+
+    # Calculate percentages for each Bin
+    percentages = []
+    for count in bin_data["Bins"].unique():
+        percentage = f"{round((count / total_players) * 100, 2)}%"
+        percentages.append(percentage)
+
+    # Append percentages as a new column
+    bin_data["Percentage of Players"] = percentages
+
+    # Rename Bins column to Total Count
+    bin_data.rename(columns={"Bins": "Total Count"},
+                    inplace=True)
+    print(bin_data)
 
 def print_final_report():
     csv_data = read_csv_file()
@@ -210,7 +242,7 @@ def print_final_report():
     get_purchasing_analysis(csv_data)
     male_count, female_count, other_count = get_gender_demographics(csv_data)
     get_purchasing_analysis_gender(csv_data, male_count, female_count, other_count)
-    get_age_demographics()
+    get_age_demographics(csv_data)
 
 
 # Entry point where the script will execute
