@@ -217,6 +217,70 @@ def get_purchasing_analysis_gender(csv_data):
 
     data_frame = pd.DataFrame(data=data,
                               index=row_labels)
+    print("--------------------------")
+    print("Purchasing Analysis (Gender)")
+    print("--------------------------")
+    print(data_frame)
+
+def get_top_spenders(csv_data):
+    # Go through each row and add each player's total purchases
+    player_purchase_data = {}
+    for index, row in csv_data.iterrows():
+        player = row["SN"]
+        purchase = row["Price"]
+
+        if player in player_purchase_data.keys():
+            # Update the player entry
+            purchase_count = player_purchase_data[player]["Purchase Count"]
+            total_purchase_value = player_purchase_data[player]["Total Purchase Value"]
+
+            purchase_count += 1
+            total_purchase_value += purchase
+            average_purchase_price = total_purchase_value / purchase_count
+
+            player_purchase_data[player] = {
+                "Purchase Count": purchase_count,
+                "Average Purchase Price": average_purchase_price,
+                "Total Purchase Value": total_purchase_value
+            }
+        else:
+            # Add player to the dict with 3 keys
+            player_purchase_data[player] = {
+                "Purchase Count": 1,
+                "Average Purchase Price": purchase,
+                "Total Purchase Value": purchase
+            }
+
+    # Sort by highest total purchase value and keep only the top 5
+    player_purchase_data = sorted(player_purchase_data.items(),
+                                  key=lambda x: x[1]["Total Purchase Value"],
+                                  reverse=True)[:5]
+
+    # Convert into a list
+    test = []
+    for item in player_purchase_data:
+        sn = item[0]
+        purchase_count = item[1]["Purchase Count"]
+        average_purchase_price = item[1]["Average Purchase Price"]
+        total_purchase_value = item[1]["Total Purchase Value"]
+        test.append([
+            sn,
+            purchase_count,
+            "${:.2f}".format(average_purchase_price),
+            "${:.2f}".format(total_purchase_value)
+        ])
+
+    # Convert to data frame
+    columns = [
+        "SN",
+        "Purchase Count",
+        "Average Purchase Price",
+        "Total Purchase Value"
+    ]
+    data_frame = pd.DataFrame(data=test, columns=columns)
+    print("--------------------------")
+    print("Top Spenders")
+    print("--------------------------")
     print(data_frame)
 
 def print_final_report():
@@ -226,6 +290,7 @@ def print_final_report():
     get_gender_demographics(csv_data)
     get_purchasing_analysis_gender(csv_data)
     get_age_demographics(csv_data)
+    get_top_spenders(csv_data)
 
 
 # Entry point where the script will execute
