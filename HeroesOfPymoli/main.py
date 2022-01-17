@@ -4,7 +4,7 @@ import os
 
 # Globally set options to display all columns and rows
 pd.options.display.max_columns = None
-pd.options.display.max_rows = None
+# pd.options.display.max_rows = None
 pd.options.display.width = 0
 
 def read_csv_file():
@@ -141,8 +141,9 @@ def get_age_demographics(csv_data):
     data_frame = pd.DataFrame(data=csv_data)
 
     # Define bins for ages and add a new column for the Bins
-    bins = [-np.inf, 10, 14, 19, 24, 29, 34, 39, np.inf]
-    data_frame["Bins"] = pd.cut(data_frame["Age"], bins=bins)
+    bins = [0, 10, 14, 19, 24, 29, 34, 39, np.inf]
+    bin_names = ["<10", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40+"]
+    data_frame["Bins"] = pd.cut(data_frame["Age"], bins=bins, labels=bin_names)
 
     # Drop duplicates based on SN
     data_frame = data_frame.drop_duplicates(subset="SN", keep="first")
@@ -223,74 +224,129 @@ def get_purchasing_analysis_gender(csv_data):
     print(data_frame)
 
 def get_top_spenders(csv_data):
-    # Go through each row and add each player's total purchases
-    player_purchase_data = {}
-    for index, row in csv_data.iterrows():
-        player = row["SN"]
-        purchase = row["Price"]
+    # Convert csv into a data frame
+    data_frame = pd.DataFrame(data=csv_data)
 
-        if player in player_purchase_data.keys():
-            # Update the player entry
-            purchase_count = player_purchase_data[player]["Purchase Count"]
-            total_purchase_value = player_purchase_data[player]["Total Purchase Value"]
+    # Make "SN" the index column
+    data_frame.set_index("SN", inplace=True)
 
-            purchase_count += 1
-            total_purchase_value += purchase
-            average_purchase_price = total_purchase_value / purchase_count
+    # Calculate the "Total Purchase Value"
+    data_frame["Total Purchase Value"] = data_frame.groupby("SN").sum()["Price"]
+    data_frame.sort_values("Total Purchase Value", ascending=False, inplace=True)
 
-            player_purchase_data[player] = {
-                "Purchase Count": purchase_count,
-                "Average Purchase Price": average_purchase_price,
-                "Total Purchase Value": total_purchase_value
-            }
-        else:
-            # Add player to the dict with 3 keys
-            player_purchase_data[player] = {
-                "Purchase Count": 1,
-                "Average Purchase Price": purchase,
-                "Total Purchase Value": purchase
-            }
+    # Calculate the "Purchase Count" for each "SN"
+    data_frame["Purchase Count"] = data_frame.groupby("SN").count()["Purchase ID"]
 
-    # Sort by highest total purchase value and keep only the top 5
-    player_purchase_data = sorted(player_purchase_data.items(),
-                                  key=lambda x: x[1]["Total Purchase Value"],
-                                  reverse=True)[:5]
+    # Calculate the "Average Purchase Price" for each "SN"
+    data_frame["Average Purchase Price"] = data_frame.groupby("SN").mean()["Price"]
 
-    # Convert into a list
-    test = []
-    for item in player_purchase_data:
-        sn = item[0]
-        purchase_count = item[1]["Purchase Count"]
-        average_purchase_price = item[1]["Average Purchase Price"]
-        total_purchase_value = item[1]["Total Purchase Value"]
-        test.append([
-            sn,
-            purchase_count,
-            "${:.2f}".format(average_purchase_price),
-            "${:.2f}".format(total_purchase_value)
-        ])
+    # Drop all columns except for the 3 needed
+    data_frame.drop(["Purchase ID", "Age", "Gender", "Item ID", "Item Name", "Price"], axis=1, inplace=True)
 
-    # Convert to data frame
-    columns = [
-        "SN",
-        "Purchase Count",
-        "Average Purchase Price",
-        "Total Purchase Value"
-    ]
-    data_frame = pd.DataFrame(data=test, columns=columns)
-    print("--------------------------")
-    print("Top Spenders")
-    print("--------------------------")
+    # Drop duplicates based on "SN" and format
+    data_frame.drop_duplicates(inplace=True)
+    data_frame["Total Purchase Value"] = data_frame["Total Purchase Value"].apply(convert_to_dollar_format)
+    data_frame["Average Purchase Price"] = data_frame["Average Purchase Price"].apply(convert_to_dollar_format)
+
+    # Re-arrange the column orders and keep only the top 5
+    data_frame = data_frame[["Purchase Count", "Average Purchase Price", "Total Purchase Value"]].head(5)
     print(data_frame)
+
+def get_purchasing_analysis_age(csv_data):
+    print("--------------------------")
+    print("Purchasing Analysis (Age)")
+    print("--------------------------")
+    # Convert csv_data into a data_frame and setup the final answer data frame
+    data_frame = pd.DataFrame(data=csv_data)
+    answer_data_frame = pd.DataFrame()
+
+    # Declare bins and bin names
+    bins = [0, 9, 14, 19, 24, 29, 34, 39, 45]
+    bin_names = ["<10", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40+"]
+
+    # Create new column "Age Ranges" and place bins in them. Then set it as the index and sort it
+    data_frame["Age Ranges"] = pd.cut(data_frame["Age"], bins=bins, labels=bin_names)
+    # print(data_frame)
+    data_frame = data_frame.set_index("Age Ranges").sort_index()
+    # print(data_frame)
+
+    # Calculate "Purchase Count" column (Series)
+    purchase_count = data_frame.groupby("Age Ranges").count()["Purchase ID"]
+    # print(purchase_count)
+
+    # Calculate "Average Purchase Price" column (Series)
+    # Average = total / total count
+    average_purchase_price = data_frame.groupby("Age Ranges").mean()["Price"]
+    # print(average_purchase_price)
+
+    # Calculate "Total Purchase Value" column (Series)
+    total_purchase_value = data_frame.groupby("Age Ranges").sum()["Price"]
+
+    # Calculate "Avg Total Purchase per Person"
+    # First find total number of unique SNs are in each bin
+    total_unique_sn_bins = data_frame.drop_duplicates("SN").groupby("Age Ranges").count()["Purchase ID"]
+
+    # Divide the "Total Purchase Value" by the total number of unique SNs in each bin to find the average purchase
+    # per person
+    average_total_purchase_per_person = total_purchase_value / total_unique_sn_bins
+
+    # Combine Series into single data frame
+    answer_data_frame["Purchase Count"] = purchase_count
+    answer_data_frame["Average Purchase Price"] = average_purchase_price.apply(convert_to_dollar_format)
+    answer_data_frame["Total Purchase Value"] = total_purchase_value.apply(convert_to_dollar_format)
+    answer_data_frame["Avg Total Purchase per Person"] = average_total_purchase_per_person.apply(convert_to_dollar_format)
+    print(answer_data_frame)
+
+def get_most_popular_items(csv_data):
+    # Convert the csv into a data frame
+    data_frame = pd.DataFrame(data=csv_data)
+
+    # Set "Item ID" and "Item Name" as the two indexes
+    data_frame.set_index(["Item ID", "Item Name"], inplace=True)
+
+    # Calculate the "Total Purchase Value" of each item and save in a new column
+    data_frame["Total Purchase Value"] = data_frame.groupby(["Item ID", "Item Name"]).sum()["Price"].to_frame()
+
+    # Calculate the "Purchase Count" of each item and save in a new column
+    data_frame["Purchase Count"] = data_frame.groupby(["Item ID", "Item Name"]).count()["Purchase ID"].to_frame()
+
+    # Calculate the average "Item Price"
+    data_frame["Item Price"] = data_frame.groupby(["Item ID", "Item Name"]).mean()["Price"].to_frame()
+
+    # Drop duplicate rows and the unneeded columns
+    data_frame = data_frame[["Purchase Count", "Item Price", "Total Purchase Value"]]
+    data_frame.sort_values("Purchase Count", inplace=True, ascending=False)
+    data_frame.drop_duplicates("Total Purchase Value", inplace=True)
+    result = data_frame.copy()
+    data_frame["Item Price"] = data_frame["Item Price"].apply(convert_to_dollar_format)
+    data_frame["Total Purchase Value"] = data_frame["Total Purchase Value"].apply(convert_to_dollar_format)
+    print(data_frame.head(5))
+    return result
+
+def get_most_profitable_items(data_frame):
+    data_frame.sort_values("Total Purchase Value", ascending=False, inplace=True)
+    data_frame["Item Price"] = data_frame["Item Price"].apply(convert_to_dollar_format)
+    data_frame["Total Purchase Value"] = data_frame["Total Purchase Value"].apply(convert_to_dollar_format)
+    print(data_frame.head(5))
+
+
+def convert_to_dollar_format(money_value):
+    # money_value = round(money_value, 2)
+    return "${:.2f}".format(money_value)
+
 
 def print_final_report():
     csv_data = read_csv_file()
-    get_player_count(csv_data)
-    get_purchasing_analysis(csv_data)
-    get_gender_demographics(csv_data)
-    get_purchasing_analysis_gender(csv_data)
-    get_age_demographics(csv_data)
-    get_top_spenders(csv_data)
+    # get_player_count(csv_data)
+    # get_purchasing_analysis(csv_data)
+    # get_gender_demographics(csv_data)
+    # get_purchasing_analysis_gender(csv_data)
+    # get_age_demographics(csv_data)
+    # get_top_spenders(csv_data)
+    data_frame = get_most_popular_items(csv_data)
+    get_most_profitable_items(data_frame)
+    # get_purchasing_analysis_age(csv_data)
+
 
 
 # Entry point where the script will execute
